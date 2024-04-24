@@ -60,7 +60,7 @@ static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
-
+void TIM_PWM_Init(uint32_t frequency, TIM_HandleTypeDef *htim);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -104,18 +104,16 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
 
-         HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+      //   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 
-         HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-
-         HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-
-         HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
-
-        		// TIM1->CCR1=1000;
-        		// TIM1->CCR2=1000;
-        		// TIM1->CCR3=1000;
-        		// TIM1->CCR4=1000;
+         uint32_t frequency = 10000; // Частота таймера (в Гц)
+         TIM_PWM_Init(frequency, &htim1);
+         frequency = 111;
+         TIM_PWM_Init(frequency, &htim2);
+         frequency = 333;
+         TIM_PWM_Init(frequency, &htim3);
+         frequency = 5555;
+        TIM_PWM_Init(frequency, &htim4);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -437,7 +435,76 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void TIM_PWM_Init(uint32_t frequency, TIM_HandleTypeDef *htim) {
 
+	// Включение тактирования соответствующего таймера
+	  if (htim->Instance == TIM1) {
+	    __HAL_RCC_TIM1_CLK_ENABLE();
+	  } else if (htim->Instance == TIM2) {
+	    __HAL_RCC_TIM2_CLK_ENABLE();
+	  } else if (htim->Instance == TIM3) {
+	    __HAL_RCC_TIM3_CLK_ENABLE();
+	  }
+	  else if (htim->Instance == TIM4) {
+	  	    __HAL_RCC_TIM4_CLK_ENABLE();
+	  	  }
+
+	 uint32_t period = HAL_RCC_GetPCLK2Freq() / frequency /72;
+
+
+	  TIM_MasterConfigTypeDef sMasterConfig = {0};
+	  TIM_OC_InitTypeDef sConfigOC = {0};
+	  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
+
+	  /* USER CODE BEGIN TIM1_Init 1 */
+
+	  /* USER CODE END TIM1_Init 1 */
+	//  htim->Instance = TIM1;
+	  htim->Init.Prescaler = 72 - 1;
+	  htim->Init.CounterMode = TIM_COUNTERMODE_UP;
+	  htim->Init.Period = period- 1;
+	  htim->Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	  htim->Init.RepetitionCounter = 0;
+	  htim->Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+	  if (HAL_TIM_PWM_Init(htim) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+	  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+	  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+	  if (HAL_TIMEx_MasterConfigSynchronization(htim, &sMasterConfig) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+	  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+	  sConfigOC.Pulse = period/2;
+	  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+	  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+	  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+	  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+	  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+	  if (HAL_TIM_PWM_ConfigChannel(htim, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+	  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+	  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+	  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+	  sBreakDeadTimeConfig.DeadTime = 0;
+	  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+	  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+	  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+	  if (HAL_TIMEx_ConfigBreakDeadTime(htim, &sBreakDeadTimeConfig) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+	  /* USER CODE BEGIN TIM1_Init 2 */
+
+	  /* USER CODE END TIM1_Init 2 */
+	  HAL_TIM_MspPostInit(htim);
+	  HAL_TIM_PWM_Start(htim, TIM_CHANNEL_1);
+
+}
 /* USER CODE END 4 */
 
 /**
